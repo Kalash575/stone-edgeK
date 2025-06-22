@@ -1,0 +1,312 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stone Edge Capital</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000000;
+            color: #FFFFFF;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .logo-container {
+            margin-bottom: 20px;
+        }
+        .logo-container img {
+            width: 150px;
+        }
+        h1 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #966C4D;
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #FFFFFF;
+            margin-bottom: 15px;
+        }
+        h3 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #FFFFFF;
+            margin-bottom: 10px;
+        }
+        .section-card {
+            background-color: #1A1A1A;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 8px 16px rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 100%;
+            max-width: 800px;
+        }
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(255, 255, 255, 0.3);
+        }
+        .chart-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 300px;
+        }
+        .founders, .contact {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+        }
+        .founder-card, .contact-info {
+            background-color: #2A2A2A;
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.15);
+        }
+        .contact a {
+            color: #FFFFFF;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .contact a:hover {
+            text-decoration: underline;
+            color: #E0E0E0;
+        }
+        .disclaimer, .note {
+            font-size: 14px;
+            color: #FFFFFF;
+            margin-top: 10px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        ul li {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="logo.png" alt="Stone Edge Capital Logo">
+    </div>
+    <h1>Stone Edge Capital</h1>
+
+    <div class="section-card">
+        <h2>About Us</h2>
+        <p>Stone Edge Capital was founded in 2023 by Shantanu Jha, with Kalash Mendole as Co-Founder. It is a personal finance initiative focused on long-term equity investing, disciplined capital allocation, and transparent portfolio tracking.</p>
+        <p>We currently manage our own funds and share our financial journey for educational purposes. We are not SEBI-registered, and nothing shared here should be considered investment advice.</p>
+    </div>
+
+    <div class="section-card">
+        <h2>Our Vision</h2>
+        <p>Our vision is to build a disciplined, research-led personal finance platform that focuses on long-term capital preservation and sustainable equity growth. Through transparent capital allocation and consistent tracking, we aim to foster financial awareness and promote a structured approach to investing — grounded in patience, data, and risk management.</p>
+    </div>
+
+    <div class="section-card">
+        <h2>Strategy</h2>
+        <ul>
+            <li>Deep dive fundamental analysis</li>
+            <li>Proper risk management</li>
+            <li>Basic technical triggers</li>
+        </ul>
+    </div>
+
+    <div class="section-card">
+        <h2>Performance</h2>
+        <div class="chart-container">
+            <canvas id="portfolioChart"></canvas>
+            <div class="note">This is our personal portfolio and not investment advice.</div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h2>Disclaimer</h2>
+        <p class="disclaimer">This is our own portfolio, shared only for educational purposes. We do not offer investment advice.</p>
+    </div>
+
+    <div class="section-card founders">
+        <h2>👥 Founders</h2>
+        <div class="founder-card">
+            <h3>👤 Shantanu Jha</h3>
+            <p>Founder & Research Analyst</p>
+            <p>Founded Stone Edge Capital in 2023. Shantanu leads investment research and equity strategy, with a deep focus on market analysis, performance tracking, and long-term capital growth.</p>
+        </div>
+        <div class="founder-card">
+            <h3>👤 Kalash Mendole</h3>
+            <p>Co-Founder & Operations Head</p>
+            <p>Co-founder of Stone Edge Capital. Kalash manages the day-to-day operations and ensures smooth execution across all internal processes, compliance, and reporting.</p>
+        </div>
+    </div>
+
+    <div class="section-card contact">
+        <h2>📫 Contact Us</h2>
+        <p>For any queries or collaboration opportunities, feel free to reach out:</p>
+        <div class="contact-info">
+            <p><strong>Shantanu Jha</strong></p>
+            <p>📧 <a href="mailto:shantanujhajha38@gmail.com">shantanujhajha38@gmail.com</a></p>
+        </div>
+        <div class="contact-info">
+            <p><strong>Team Stone Edge Capital</strong></p>
+            <p>📧 <a href="mailto:primewealth1729@gmail.com">primewealth1729@gmail.com</a></p>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Large Cap', 'Mid Cap', 'Small Cap', 'Sectoral/Thematic'],
+                datasets: [{
+                    label: 'Portfolio Allocation (₹)',
+                    data: [200000, 150000, 100000, 50000],
+                    backgroundColor: [
+                        '#1E3A8A', // Navy blue
+                        '#3B82F6',
+                        '#60A5FA', // Light blue
+                        '#BFDBFE'
+                    ],
+                    borderColor: '#1E3A8A',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'x',
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString('en-IN');
+                            }
+                        }
+                    },
+                    x: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '₹5 Lakh Portfolio (Educational Purpose Only)',
+                        font: {
+                            size: 20,
+                            weight: 'bold',
+                            family: 'Roboto'
+                        },
+                        color: '#FFFFFF',
+                        padding: {
+                            top: 10,
+                            bottom: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += '₹' + context.parsed.y.toLocaleString('en-IN');
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return '₹' + value.toLocaleString('en-IN');
+                        },
+                        color: '#FFFFFF',
+                        font: {
+                            weight: 'bold',
+                            family: 'Roboto'
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 1000,
+                    easing: 'easeInOutQuad'
+                }
+            },
+            plugins: [{
+                id: 'customNote',
+                afterDatasetsDraw(chart) {
+                    const { ctx, chartArea } = chart;
+                    ctx.save();
+                    ctx.font = '12px Roboto';
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('This is our personal portfolio and not investment advice.', 
+                        chartArea.left + chartArea.width / 2, 
+                        chartArea.bottom + 20);
+                    ctx.restore();
+                }
+            }]
+        });
+    </script>
+</body>
+</html>
